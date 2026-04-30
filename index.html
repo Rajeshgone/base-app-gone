@@ -2,168 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Base Wallet App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Ethers -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <!-- ✅ REQUIRED FOR BASE VERIFICATION -->
+  <meta name="base:app_id" content="69d8a85f34c69936dc95d6d0" />
 
-  <!-- Web3Modal -->
-  <script src="https://unpkg.com/@web3modal/html@latest"></script>
+  <title>Base App Gone</title>
 
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
-      background: #0b0f19;
+      background: #0f172a;
       color: white;
-      text-align: center;
-      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-
     .card {
-      background: #151a2e;
-      padding: 20px;
-      border-radius: 12px;
-      margin: 15px auto;
-      max-width: 400px;
+      padding: 30px;
+      border-radius: 16px;
+      background: #1e293b;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      text-align: center;
     }
-
-    input, button {
-      padding: 10px;
-      margin: 5px;
-      width: 90%;
-      border-radius: 8px;
-      border: none;
-    }
-
     button {
-      background: #4a7cff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #3b82f6;
       color: white;
       cursor: pointer;
-    }
-
-    button:hover {
-      background: #6a92ff;
-    }
-
-    .history {
-      text-align: left;
-      font-size: 12px;
-      max-height: 150px;
-      overflow-y: auto;
+      margin-top: 15px;
     }
   </style>
 </head>
+
 <body>
+  <div class="card">
+    <h1>🚀 Base App Connected</h1>
+    <p>Your app is ready for Base verification.</p>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <p id="status"></p>
+  </div>
 
-<h2>🚀 Base Wallet App</h2>
-
-<div class="card">
-  <button id="connectBtn">Connect Wallet</button>
-  <p id="address">Not connected</p>
-</div>
-
-<div class="card">
-  <h3>Balance</h3>
-  <p id="balance">0 ETH</p>
-</div>
-
-<div class="card">
-  <h3>Send Transaction</h3>
-  <input id="to" placeholder="Recipient Address" />
-  <input id="amount" placeholder="Amount in ETH" />
-  <button id="sendBtn">Send</button>
-</div>
-
-<div class="card">
-  <h3>Transaction History</h3>
-  <div id="history" class="history"></div>
-</div>
-
-<script>
-  let provider, signer, userAddress;
-
-  const BASE_MAINNET = {
-    chainId: "0x2105",
-    chainName: "Base Mainnet",
-    rpcUrls: ["https://mainnet.base.org"],
-    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }
-  };
-
-  async function connectWallet() {
-    if (!window.ethereum) {
-      alert("Install MetaMask");
-      return;
+  <script>
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({
+            method: "eth_requestAccounts",
+          });
+          document.getElementById("status").innerText =
+            "Connected: " + accounts[0];
+        } catch (err) {
+          document.getElementById("status").innerText =
+            "Connection rejected";
+        }
+      } else {
+        document.getElementById("status").innerText =
+          "Install MetaMask";
+      }
     }
-
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
-
-    document.getElementById("address").innerText = userAddress;
-
-    await switchToBase();
-    getBalance();
-  }
-
-  async function switchToBase() {
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: BASE_MAINNET.chainId }]
-      });
-    } catch (e) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [BASE_MAINNET]
-      });
-    }
-  }
-
-  async function getBalance() {
-    const balance = await provider.getBalance(userAddress);
-    const eth = ethers.formatEther(balance);
-    document.getElementById("balance").innerText = eth + " ETH";
-  }
-
-  async function sendTx() {
-    const to = document.getElementById("to").value;
-    const amount = document.getElementById("amount").value;
-
-    if (!to || !amount) return alert("Fill all fields");
-
-    const tx = await signer.sendTransaction({
-      to,
-      value: ethers.parseEther(amount)
-    });
-
-    saveTx(tx.hash);
-    renderHistory();
-
-    alert("Transaction sent: " + tx.hash);
-  }
-
-  function saveTx(hash) {
-    let history = JSON.parse(localStorage.getItem("txs") || "[]");
-    history.unshift(hash);
-    localStorage.setItem("txs", JSON.stringify(history));
-  }
-
-  function renderHistory() {
-    const history = JSON.parse(localStorage.getItem("txs") || "[]");
-    const container = document.getElementById("history");
-
-    container.innerHTML = history
-      .map(h => `<div>🔗 ${h}</div>`)
-      .join("");
-  }
-
-  document.getElementById("connectBtn").onclick = connectWallet;
-  document.getElementById("sendBtn").onclick = sendTx;
-
-  renderHistory();
-</script>
-
+  </script>
 </body>
 </html>
