@@ -1,1 +1,169 @@
-<meta name="base:app_id" content="69d8a85f34c69936dc95d6d0" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Base Wallet App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Ethers -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+
+  <!-- Web3Modal -->
+  <script src="https://unpkg.com/@web3modal/html@latest"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f19;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #151a2e;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 15px auto;
+      max-width: 400px;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      width: 90%;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background: #4a7cff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #6a92ff;
+    }
+
+    .history {
+      text-align: left;
+      font-size: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h2>🚀 Base Wallet App</h2>
+
+<div class="card">
+  <button id="connectBtn">Connect Wallet</button>
+  <p id="address">Not connected</p>
+</div>
+
+<div class="card">
+  <h3>Balance</h3>
+  <p id="balance">0 ETH</p>
+</div>
+
+<div class="card">
+  <h3>Send Transaction</h3>
+  <input id="to" placeholder="Recipient Address" />
+  <input id="amount" placeholder="Amount in ETH" />
+  <button id="sendBtn">Send</button>
+</div>
+
+<div class="card">
+  <h3>Transaction History</h3>
+  <div id="history" class="history"></div>
+</div>
+
+<script>
+  let provider, signer, userAddress;
+
+  const BASE_MAINNET = {
+    chainId: "0x2105",
+    chainName: "Base Mainnet",
+    rpcUrls: ["https://mainnet.base.org"],
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }
+  };
+
+  async function connectWallet() {
+    if (!window.ethereum) {
+      alert("Install MetaMask");
+      return;
+    }
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    document.getElementById("address").innerText = userAddress;
+
+    await switchToBase();
+    getBalance();
+  }
+
+  async function switchToBase() {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: BASE_MAINNET.chainId }]
+      });
+    } catch (e) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [BASE_MAINNET]
+      });
+    }
+  }
+
+  async function getBalance() {
+    const balance = await provider.getBalance(userAddress);
+    const eth = ethers.formatEther(balance);
+    document.getElementById("balance").innerText = eth + " ETH";
+  }
+
+  async function sendTx() {
+    const to = document.getElementById("to").value;
+    const amount = document.getElementById("amount").value;
+
+    if (!to || !amount) return alert("Fill all fields");
+
+    const tx = await signer.sendTransaction({
+      to,
+      value: ethers.parseEther(amount)
+    });
+
+    saveTx(tx.hash);
+    renderHistory();
+
+    alert("Transaction sent: " + tx.hash);
+  }
+
+  function saveTx(hash) {
+    let history = JSON.parse(localStorage.getItem("txs") || "[]");
+    history.unshift(hash);
+    localStorage.setItem("txs", JSON.stringify(history));
+  }
+
+  function renderHistory() {
+    const history = JSON.parse(localStorage.getItem("txs") || "[]");
+    const container = document.getElementById("history");
+
+    container.innerHTML = history
+      .map(h => `<div>🔗 ${h}</div>`)
+      .join("");
+  }
+
+  document.getElementById("connectBtn").onclick = connectWallet;
+  document.getElementById("sendBtn").onclick = sendTx;
+
+  renderHistory();
+</script>
+
+</body>
+</html>
